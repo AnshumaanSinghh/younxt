@@ -33,11 +33,16 @@ export default function ForgotPasswordScreen() {
     if (resetError) {
       setError(resetError);
     } else {
-      Alert.alert(
-        "Email Sent",
-        "If an account with that email exists, we've sent you instructions to reset your password.",
-        [{ text: "Back to Login", onPress: () => router.back() }]
-      );
+      if (Platform.OS === 'web') {
+        window.alert("If an account with that email exists, we've sent you instructions to reset your password.");
+        router.back();
+      } else {
+        Alert.alert(
+          "Email Sent",
+          "If an account with that email exists, we've sent you instructions to reset your password.",
+          [{ text: "Back to Login", onPress: () => router.back() }]
+        );
+      }
     }
   };
 

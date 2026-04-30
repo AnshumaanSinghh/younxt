@@ -23,18 +23,26 @@ export default function ProfileScreen() {
   const [editing, setEditing] = useState(false);
   const [editName, setEditName] = useState('');
 
-  const handleSignOut = () => {
-    Alert.alert("Sign Out", "Are you sure you want to sign out?", [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Sign Out", style: "destructive",
-        onPress: async () => {
-          setSigningOut(true);
-          await signOutUser();
-          setSigningOut(false);
+  const handleSignOut = async () => {
+    if (Platform.OS === 'web') {
+      if (window.confirm("Are you sure you want to sign out?")) {
+        setSigningOut(true);
+        await signOutUser();
+        setSigningOut(false);
+      }
+    } else {
+      Alert.alert("Sign Out", "Are you sure you want to sign out?", [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Sign Out", style: "destructive",
+          onPress: async () => {
+            setSigningOut(true);
+            await signOutUser();
+            setSigningOut(false);
+          },
         },
-      },
-    ]);
+      ]);
+    }
   };
 
   const handleEditProfile = () => {
