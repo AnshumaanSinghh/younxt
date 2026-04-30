@@ -3,12 +3,15 @@
  */
 import React from 'react';
 import { Platform } from 'react-native';
-import { Tabs } from 'expo-router';
+import { Tabs, Redirect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { Colors, Shadows } from '../../src/theme';
+import { useAuth } from '../../src/context/AuthContext';
 
 export default function TabLayout() {
+  const { isAuthenticated, loading } = useAuth();
+
   const handleTabPress = () => {
     if (Platform.OS !== 'web') {
       try {
@@ -18,6 +21,11 @@ export default function TabLayout() {
       }
     }
   };
+
+  // Redirect to login if not authenticated
+  if (!loading && !isAuthenticated) {
+    return <Redirect href="/login" />;
+  }
 
   return (
     <Tabs
