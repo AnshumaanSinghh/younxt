@@ -1,0 +1,21 @@
+name: Bug report
+description: Something in YouNxt doesn't work as expected
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What did you do, what did you expect, and what happened instead?
+    validations:
+      required: true
+  - type: input
+    id: where
+    attributes:
+      label: Where
+      placeholder: e.g. Chrome on Android, Safari on iPhone, desktop web
+  - type: textarea
+    id: screens
+    attributes:
+      label: Screenshots
+      description: Optional. Please don't include personal letters or notes.

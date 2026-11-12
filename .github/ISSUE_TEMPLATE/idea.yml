@@ -1,0 +1,14 @@
+name: Feature idea
+description: Suggest something that would make YouNxt more useful
+labels: [idea]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What would you like to be able to do?
+    validations:
+      required: true
+  - type: textarea
+    id: why
+    attributes:
+      label: Why does it matter to you?

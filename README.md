@@ -1,241 +1,84 @@
-# YouNxt — AI-Powered Future Simulation Engine
+<p align="center">
+  <img src="media/og.png" alt="YouNxt: every choice has two futures. See both." width="820">
+</p>
 
-> **An AI decision engine that doesn't just advise — it simulates your future.**
+<h1 align="center">YouNxt</h1>
 
-YouNxt predicts life outcomes across 7, 30, and 90-day timelines using a 3-model AI cascade with behavioral memory and explainable confidence scoring.
+<p align="center">
+  <b>See both futures before you choose.</b><br>
+  One concrete next move. A forecast built from your own follow-through. Reality checks at 7, 30 and 90 days.
+</p>
 
-**Live Demo:** [https://younxt-f02fa.web.app](https://younxt-f02fa.web.app)
-
----
-
-## Architecture Overview
-
-```
-┌──────────────────────────────────────────────────────────┐
-│                    React Native (Expo)                    │
-│              File-based Router + Context API              │
-└────────────────────────┬─────────────────────────────────┘
-                         │
-          ┌──────────────▼──────────────┐
-          │   BFF (Backend-for-Frontend) │
-          │    Client-Side AI Router     │
-          │   src/services/api.js        │
-          └──────┬───────┬───────┬──────┘
-                 │       │       │
-          ┌──────▼──┐ ┌──▼───┐ ┌▼──────────┐
-          │  Groq   │ │Gemini│ │ OpenRouter │
-          │LPU Arch │ │1.5Fl │ │ Llama 3.1  │
-          └────┬────┘ └──┬───┘ └─────┬──────┘
-               │ fail    │ fail      │ fail
-          ┌────▼─────────▼───────────▼──────┐
-          │   Local Rule-Based Fallback     │
-          │  15 mood×mode curated templates │
-          └─────────────────────────────────┘
-                         │
-          ┌──────────────▼──────────────┐
-          │     Firebase Firestore      │
-          │   (Auth + NoSQL Database)   │
-          └─────────────────────────────┘
-```
-
-### Why Client-Side AI Router (BFF Pattern)?
-
-Firebase Cloud Functions require the **Blaze (pay-as-you-go) plan**. To operate entirely within the **free tier**, the AI orchestration runs client-side as a Backend-for-Frontend (BFF) pattern. The routing logic, schema validation, and fallback cascade are identical to what would run on a server — the function exists in `functions/index.js` and is ready to deploy once migrated to Blaze.
-
-**Migration path:** When scaling to production with real users, move `api.js` logic to `functions/index.js` → deploy via `firebase deploy --only functions` → remove client-side keys.
+<p align="center">
+  <a href="https://anshumaansinghh.github.io/younxt/"><b>Try it live →</b></a>
+  &nbsp;·&nbsp; no sign-up needed &nbsp;·&nbsp; web, iOS and Android
+</p>
 
 ---
 
-## Decision-Based Model Routing
+![YouNxt landing page with the 3D two-roads hero](media/hero.png)
 
-This is NOT a fallback system. The router makes an **active decision** about which model best fits the query *before* the first call is made:
+## What it does
 
-```
-User Input → Complexity Classifier
-  ├─ Simple query (mood=happy, strategy=Improve) → Groq first (speed priority)
-  ├─ Simulation enabled                         → Gemini first (reasoning priority)
-  ├─ Experiment mode                             → Gemini first (creativity priority)
-  └─ Emotional context (sad/overwhelmed)         → Gemini first (empathy priority)
-```
+1. **Check in.** Tell it your inner weather (bright, clear, low, stormy, flooded) and how much energy you really have. Ten seconds.
+2. **Get one move.** Not a list of ten habits: one concrete thing you can do today, with three steps and a reason it fits you right now.
+3. **See two futures.** Flip the card between *do it* and *skip it* at 7, 30 and 90 days. The "do it" side shows a forecast range, not a promise.
+4. **Commit, log, reality-check.** One tap a day to log. On day 7, 30 and 90 YouNxt compares what it forecast with what you actually did.
 
-| Decision Signal | Routed To | Reasoning |
-|----------------|----------|----------|
-| Quick advice, positive mood | **Groq** (Llama 3.1 8B) | Sub-second latency via LPU architecture |
-| Future Simulation toggle ON | **Gemini** (1.5 Flash) | Superior reasoning for bifurcated timeline prediction |
-| Experiment Mode selected | **Gemini** (1.5 Flash) | Larger context window for creative, unconventional ideas |
-| Mood = sad / overwhelmed | **Gemini** (1.5 Flash) | Better emotional intelligence and empathy |
-| Deep Dive refinement | **Gemini** (1.5 Flash) | Needs full prior context for iterative improvement |
-| All primaries fail | **OpenRouter** (Llama 3.1) | Third-party redundancy layer |
-| All AI providers fail | **Local Rule Engine** | 15 handcrafted mood×mode templates, zero latency |
+![Today, the skip-it future and a commitment in progress](media/phones.png)
 
-## Firestore Security Rules
+## Why it's different
 
-```javascript
-rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-    // Helper: Authenticated user accessing their own data
-    function isOwner(userId) {
-      return request.auth != null && request.auth.uid == userId;
-    }
+Most AI self-improvement apps write a confident plan and never look back. YouNxt is built to be **honest you can check**:
 
-    match /users/{userId} {
-      // Read/write own profile only
-      allow read: if isOwner(userId);
-      allow create: if isOwner(userId)
-        && request.resource.data.name is string
-        && request.resource.data.goals is list
-        && request.resource.data.goals.size() <= 10;
-      allow update: if isOwner(userId)
-        && !request.resource.data.diff(resource.data)
-            .affectedKeys().hasAny(['createdAt', 'email']);
-      allow delete: if false;  // Admin only
+| A typical AI coach | YouNxt |
+|---|---|
+| Prints a made-up "confidence score" | Shows a range from a simulation of **your own** logged follow-through |
+| Never checks whether it was right | **Reality checks** at day 7, 30 and 90, forecast vs actual |
+| Same advice for everyone | The forecast learns from every session you log, done or skipped |
+| Needs an account first | Every feature works as a guest, even offline |
 
-      match /logs/{logId} {
-        allow read: if isOwner(userId);
-        allow create: if isOwner(userId)
-          && request.resource.data.motivationalLine is string
-          && request.resource.data.actionSteps is list;
-        allow update: if isOwner(userId)
-          && request.resource.data.diff(resource.data)
-              .affectedKeys().hasOnly(['completed']);
-        allow delete: if isOwner(userId);  // Required for auto-cleanup
-      }
-    }
+It also tells you something nothing else does: **how well you predict yourself.** Each commitment asks how sure you are; weeks later you see the gap ("you say 90%, you deliver 62%").
 
-    // Default deny
-    match /{document=**} {
-      allow read, write: if false;
-    }
-  }
-}
-```
+![Forecast vs what actually happened](media/forecast-vs-actual.png)
 
-**Key security decisions:**
-- **Row-level isolation**: Users can ONLY access data where `request.auth.uid == userId`
-- **Field-level protection**: `createdAt` and `email` cannot be modified after creation
-- **Update restriction**: Only `completed` field can be toggled on logs
-- **Controlled deletion**: Enabled for logs (required by 90-day auto-cleanup), blocked for profiles
+## Features
 
----
+- **The Future Engine.** A Monte Carlo simulation (hundreds of possible next-90-days) driven by a Bayesian model of your follow-through, with momentum from streaks and drag from missed days. The numbers come from the model, never from an AI.
+- **AI-written moves** for signed-in users, generated server-side (no keys in your browser), plus an on-device library of 95 hand-written moves so it always works.
+- **Two-futures flip card**, reality checks and calibration.
+- **Letters to future you.** Seal a letter for a week, a month, 90 days or a year. It opens on the day, next to what you did in between.
+- **Wisdom.** 99 quotes, each traced to its real source (many popular "Stoic" quotes are misattributed; these aren't), in a 3D cover-flow.
+- **Day and Night themes** with every text colour checked against WCAG contrast; status never shown by colour alone.
+- **Private by default.** Guest data stays on your device. Account data is readable only by you. Export or delete everything any time.
+- **Safety first.** If what you type suggests you might be in danger, YouNxt stops coaching and shows crisis lines instead.
 
-## Cloud Function (Server-Side AI Router)
+![Wisdom cover-flow](media/wisdom.png)
 
-The server-side implementation exists at `functions/index.js` and includes:
-- **Firebase Auth verification** (`request.auth` check)
-- **Server-side rate limiting** (in-memory per-UID rolling window, 15 req/min)
-- **Input whitelist validation** (only valid moods, modes, levels accepted)
-- **Output sanitization** (HTML stripping, length capping)
-- **Groq → Gemini cascade** with full error isolation
+## Plans
 
-**Status:** Ready to deploy. Requires Firebase Blaze plan for Cloud Functions runtime.
+| | Free | Pro |
+|---|---|---|
+| Check-ins and next moves | ✓ (on-device; 5 AI moves a day with an account) | 60 AI moves a day |
+| Two-futures forecast | 7 and 30 days | 7, 30 and 90 days |
+| Active commitments | 2 | 12 |
+| Calibration report | Basic | Full |
+| Letters to future you | 1 sealed | Unlimited |
 
----
+**Early access:** every Pro feature is free right now. Join the founding list in the app to lock in lifetime Pro at the founding price when payments open.
 
-## Smart Data Lifecycle
+## Built with
 
-| Data Type | Retention | Reasoning |
-|-----------|-----------|-----------|
-| Logs WITH simulation data | **Forever** | Required for predicted-vs-actual reconciliation at 7/30/90 days |
-| Logs WITHOUT simulation data | **90 days** | Keeps DB lean while preserving recent history |
-| User profiles | **Forever** | Core user data |
-| Favorites/likes | **Local (AsyncStorage)** | No Firestore cost |
+Expo + React Native (one codebase for web, iOS and Android) · Expo Router · Reanimated 3D motion · react-native-svg charts · Firebase Auth, Firestore and Cloud Functions · Gemini and Groq behind a server-side gateway · Lemon Squeezy for billing.
 
----
+## Source code
 
-## 📊 Observability
+YouNxt v2 is a commercial product and its source is private. This repository is the public home for the project: screenshots, the changelog, and the **issue tracker for feedback, bugs and feature requests**.
 
-Every AI request is instrumented with structured telemetry logged to the browser console:
+Version 1 (April 2026) was published here under the MIT licence and is still available in this repository's history under those terms.
 
-```
-[AI Router] ✅ Groq (Llama 3.1 8B) | 847ms | Reason: quick_advice(mood=happy,strat=Improve Current Path)
-```
+## Feedback
 
-**Tracked per request:**
-| Metric | Example |
-|--------|--------|
-| Model Selected | `Gemini (1.5 Flash)` |
-| Latency (ms) | `1203ms` |
-| Routing Reason | `deep_reasoning(sim=true,strat=Experiment Mode,mood=neutral)` |
-| Cascade Attempts | `[{Gemini: SUCCESS, 1203ms}]` or `[{Groq: FAILED, 502ms}, {Gemini: SUCCESS, 1100ms}]` |
-| Status | `SUCCESS`, `FAILED`, `INVALID_SCHEMA` |
+[Open an issue](https://github.com/AnshumaanSinghh/younxt/issues/new/choose) or email singhanshumaan9169@gmail.com.
 
-**What this enables:**
-- Monitor which models are actually being used and their success rates
-- Track average latency per routing decision type
-- Detect provider outages by observing cascade depth
-- Foundation for a future analytics dashboard (e.g., "Groq handles 72% of requests at avg 600ms")
-
-Routing metadata is also exposed in the **UI** — each suggestion card displays the model name and response latency.
-
----
-
-## 🔮 Signature Feature: Future Simulation Timeline
-
-The primary differentiator from competitors (MIT Future You, MyFutureSelf, Mora):
-
-When **Future Simulation** is toggled ON, the AI generates a **bifurcated outcome analysis**:
-
-```
-┌─────────────────────────────────────────────┐
-│           FUTURE SIMULATION                 │
-├─────────────────┬───────────────────────────┤
-│  Follow Path ✅  │    Skip Path ❌           │
-├─────────────────┼───────────────────────────┤
-│  7d:  Build     │  7d:  No change           │
-│       consistency│                           │
-│ 30d:  Noticeable │  30d: Increased regret    │
-│       improvement│       pattern              │
-│ 90d:  Skill     │  90d: Stagnation          │
-│       mastery    │                           │
-└─────────────────┴───────────────────────────┘
-```
-
-**Key differences from competitors:**
-- **Tabbed UI** — User switches between "Follow" and "Skip" timelines
-- **Animated vertical timeline** — Each node (7d/30d/90d) fades in sequentially
-- **Glowing dots** — Green for positive path, red for negative path
-- **Data persistence** — Simulation predictions are stored forever in Firestore for future predicted-vs-actual reconciliation
-
----
-
-## Tech Stack
-
-| Layer | Technology |
-|-------|-----------|
-| Frontend | React Native + Expo Router |
-| State | Context API + useReducer |
-| Database | Firebase Firestore |
-| Auth | Firebase Auth (Email/Password) |
-| AI Models | Groq, Google Gemini, OpenRouter |
-| Hosting | Firebase Hosting (CDN) |
-| Animations | React Native Animated API |
-| Typography | Google Fonts (Inter) |
-
----
-
-## Getting Started
-
-```bash
-# Install dependencies
-npm install
-
-# Set environment variables
-cp .env.example .env
-# Fill in your API keys
-
-# Start development server
-npm run web
-
-# Build for production
-npx expo export --platform web
-
-# Deploy
-npx firebase-tools deploy --only hosting
-```
-
----
-
-## License
-
-MIT
+<p align="center"><sub>© 2026 Anshumaan Singh · YouNxt</sub></p>
